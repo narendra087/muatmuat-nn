@@ -77,7 +77,7 @@ export default function Home() {
   useEffect(() => {
     handleFilter();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedKeyword, sortData]);
+  }, [debouncedKeyword, sortData, productList]);
 
   const handleEditCard = (product: IProduct) => {
     setSelectedProduct(product);
