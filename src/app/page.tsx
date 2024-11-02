@@ -1,101 +1,229 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Menu,
+  MenuItem,
+  OutlinedInput,
+  Stack,
+  Typography,
+} from "@mui/material";
+
+import AddIcon from "@mui/icons-material/Add";
+import SearchIcon from "@mui/icons-material/Search";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+
+import ProductCard from "./components/ProductCard";
+
+import { IProduct } from "./components/general.types";
+import { useDebounce } from "./hooks/useDebounce";
+
+import { useAppSelector } from "./store";
+import ProductForm from "./components/ProductForm";
+
+interface ISortData {
+  target: "created_at" | "price" | "stock";
+  type: "asc" | "desc";
+}
+
+interface ISortOptions {
+  title: string;
+  target: ISortData["target"];
+}
+
+const sortOptions: ISortOptions[] = [
+  {
+    title: "Date Created",
+    target: "created_at",
+  },
+  {
+    title: "Price",
+    target: "price",
+  },
+  {
+    title: "Stock",
+    target: "stock",
+  },
+];
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const [modalOpen, setModalOpen] = useState<"" | "create" | "edit">("");
+  const [selectedProduct, setSelectedProduct] = useState<IProduct>();
+
+  const [filteredProduct, setFilteredProduct] = useState<IProduct[]>([]);
+  const [sortData, setSortData] = useState<ISortData>({
+    target: "created_at",
+    type: "asc",
+  });
+  const [keyword, setKeyword] = useState<string>("");
+  const debouncedKeyword = useDebounce(keyword, 500);
+
+  const productList = useAppSelector((state) => state.product.product);
+
+  const handleOpenMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+  };
+
+  useEffect(() => {
+    handleFilter();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedKeyword, sortData]);
+
+  const handleEditCard = (product: IProduct) => {
+    setSelectedProduct(product);
+    setModalOpen("edit");
+  };
+
+  const handleCloseForm = () => {
+    setModalOpen("");
+    if (selectedProduct) setSelectedProduct(undefined);
+  };
+
+  const handleFilter = () => {
+    const products = productList.filter((item) => {
+      if (debouncedKeyword) {
+        return item.title
+          .toLowerCase()
+          .includes(debouncedKeyword.toLowerCase());
+      } else {
+        return true;
+      }
+    });
+
+    let sortedProducts: IProduct[] = products;
+    if (sortData.target === "created_at") {
+      sortedProducts = products.sort((a, b) =>
+        sortData.type === "asc"
+          ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    } else if (sortData.target === "price") {
+      sortedProducts = products.sort((a, b) =>
+        sortData.type === "asc" ? a.price - b.price : b.price - a.price
+      );
+    } else if (sortData.target === "stock") {
+      sortedProducts = products.sort((a, b) =>
+        sortData.type === "asc" ? a.stock - b.stock : b.stock - a.stock
+      );
+    }
+
+    setFilteredProduct(sortedProducts);
+  };
+
+  const handleSort = (target: ISortData["target"]) => {
+    if (sortData.target === target) {
+      setSortData({
+        ...sortData,
+        type: sortData.type === "asc" ? "desc" : "asc",
+      });
+    } else {
+      setSortData({
+        ...sortData,
+        target,
+      });
+    }
+
+    handleFilter();
+    handleCloseMenu()
+  };
+
+  return (
+    <>
+      <Box className="p-6">
+        <Stack className="w-100 gap-5 flex-col">
+          <Stack
+            sx={{ flexDirection: "row" }}
+            className="items-center justify-between"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+            <Typography sx={{ fontWeight: 700, fontSize: "32px" }}>
+              Product List
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setModalOpen("create")}
+            >
+              Create New Product
+            </Button>
+          </Stack>
+          <Stack sx={{ flexDirection: "row" }} className="gap-2 items-center">
+            {/* SEARCH BAR */}
+            <OutlinedInput
+              className="bg-white rounded-2xl w-full max-w-80"
+              placeholder="Search product"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              size="small"
+              startAdornment={<SearchIcon />}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+            {/* MENU */}
+            <Button
+              id="basic-button"
+              aria-controls={open ? "basic-menu" : undefined}
+              aria-haspopup="true"
+              aria-expanded={open ? "true" : undefined}
+              variant="outlined"
+              onClick={handleOpenMenu}
+              startIcon={
+                sortData.type === "asc" ? (
+                  <ArrowUpwardIcon />
+                ) : (
+                  <ArrowDownwardIcon />
+                )
+              }
+            >
+              {sortOptions.find((x) => x.target === sortData.target)?.title || 'Sort'}
+            </Button>
+            <Menu
+              id="basic-menu"
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleCloseMenu}
+              MenuListProps={{
+                "aria-labelledby": "basic-button",
+              }}
+            >
+              {sortOptions.map((opt, index) => (
+                <MenuItem key={index} onClick={() => handleSort(opt.target)}>
+                  {opt.title}
+                </MenuItem>
+              ))}
+            </Menu>
+          </Stack>
+        </Stack>
+
+        <Stack className="mt-5 gap-4">
+          {filteredProduct.map((item) => (
+            <ProductCard
+              key={item.id}
+              product={item}
+              handleEdit={() => handleEditCard(item)}
+            />
+          ))}
+        </Stack>
+
+        {filteredProduct.length === 0 && <Box>No Product Found</Box>}
+      </Box>
+
+      {modalOpen !== "" && (
+        <ProductForm
+          open={true}
+          modalType={modalOpen}
+          handleClose={handleCloseForm}
+          product={selectedProduct}
+        />
+      )}
+    </>
   );
 }
