@@ -153,7 +153,7 @@ export default function Home() {
               startIcon={<AddIcon />}
               onClick={() => setModalOpen("create")}
             >
-              New Product
+              Create New Product
             </Button>
           </Stack>
           <Stack sx={{ flexDirection: "row" }} className="gap-2 items-center">
@@ -169,10 +169,6 @@ export default function Home() {
 
             {/* MENU */}
             <Button
-              sx={{
-                width: '100%',
-                maxWidth: 'fit-content'
-              }}
               id="basic-button"
               aria-controls={open ? "basic-menu" : undefined}
               aria-haspopup="true"

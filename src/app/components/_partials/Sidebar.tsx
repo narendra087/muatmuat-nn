@@ -1,5 +1,3 @@
-"use client"
-
 import {
   Box,
   Drawer,
@@ -9,17 +7,12 @@ import {
   ListItemIcon,
   ListItemText,
   Toolbar,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import InventoryIcon from "@mui/icons-material/Inventory";
 
+const drawerWidth = 240;
+
 export default function Sidebar() {
-  const theme = useTheme()
-  const largeSize = useMediaQuery(theme.breakpoints.up('md'))
-
-  const drawerWidth = largeSize ? 240 : 70
-
   const menu = [
     {
       title: "Product",
@@ -44,7 +37,7 @@ export default function Sidebar() {
             <ListItem key={item.title} disablePadding>
               <ListItemButton>
                 <ListItemIcon>{item.icon}</ListItemIcon>
-                {largeSize && <ListItemText primary={item.title} />}
+                <ListItemText primary={item.title} />
               </ListItemButton>
             </ListItem>
           ))}
